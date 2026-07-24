@@ -73,6 +73,7 @@ class WalkerS2Config(RobotConfig):
     # Isaac Sim 特定设置
     task_name: str = "Foam_Inlaying"  # 默认任务名称
     task_cfg: dict = field(default_factory=dict)
+    task_cfg_overrides: str = ""  # JSON 字符串，用于命令行覆盖 YAML 配置，例如 '{"part":{"fixed_spawn":{"enabled":false},"num_parts_a":2,"num_parts_b":2}}'
     root_path: str = "Ubtech_sim"
     task_cfg_path: str = str(Path("Ubtech_sim") / "config" / "Packing_Box.yaml")
 
@@ -105,7 +106,7 @@ class WalkerS2Config(RobotConfig):
     head_viz_enabled: bool = True
     head_viz_window_name: str = "walker_s2_cameras"
     head_viz_scale: float = 1.0
-    head_viz_every_n: int = 10
+    head_viz_every_n: int = 1
     head_viz_window_x: int = 40
     head_viz_window_y: int = 40
     head_viz_show_labels: bool = True

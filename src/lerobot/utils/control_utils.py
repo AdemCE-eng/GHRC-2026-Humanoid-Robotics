@@ -118,6 +118,37 @@ def predict_action(
     return action
 
 
+def predict_action_chunk(
+    observation: dict[str, np.ndarray],
+    policy: PreTrainedPolicy,
+    device: torch.device,
+    preprocessor: PolicyProcessorPipeline[dict[str, Any], dict[str, Any]],
+    postprocessor: PolicyProcessorPipeline[PolicyAction, PolicyAction],
+    use_amp: bool,
+    task: str | None = None,
+    robot_type: str | None = None,
+):
+    """
+    Performs a single-step inference to predict a full action chunk from an observation.
+
+    Same pipeline as `predict_action`, but calls `policy.predict_action_chunk()` instead of
+    `policy.select_action()`, returning the full chunk of shape (batch_size, chunk_size, action_dim).
+    """
+    observation = copy(observation)
+    with (
+        torch.inference_mode(),
+        torch.autocast(device_type=device.type) if device.type == "cuda" and use_amp else nullcontext(),
+    ):
+        observation = prepare_observation_for_inference_walker_s2(observation, device, task, robot_type)
+        observation = preprocessor(observation)
+
+        action_chunk = policy.predict_action_chunk(observation)
+
+        action_chunk = postprocessor(action_chunk)
+
+    return action_chunk
+
+
 def init_keyboard_listener():
     """
     Initializes a non-blocking keyboard listener for real-time user interaction.
@@ -173,6 +204,30 @@ def init_keyboard_listener():
     listener.start()
 
     return listener, events
+
+
+def consume_recording_stop_request(events: dict | None) -> bool:
+    """Consume keyboard flags that mean recording should stop immediately."""
+    if not events:
+        return False
+
+    should_stop = bool(events.get("stop_recording"))
+    if should_stop:
+        events["exit_early"] = False
+        events["stop_recording"] = False
+    return should_stop
+
+
+def consume_episode_rerecord_request(events: dict | None) -> bool:
+    """Consume keyboard flags that mean the current episode should be rerecorded."""
+    if not events:
+        return False
+
+    should_rerecord = bool(events.get("rerecord_episode"))
+    if should_rerecord:
+        events["exit_early"] = False
+        events["rerecord_episode"] = False
+    return should_rerecord
 
 
 def sanity_check_dataset_name(repo_id, policy_cfg):

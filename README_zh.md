@@ -56,7 +56,7 @@
 
 ## 技术文档索引
 
-基线完整工作流分为六个阶段：**建议按顺序阅读**；也可根据实际进度直接跳转到所需阶段。
+基线完整工作流分为七个阶段：**建议按顺序阅读**；也可根据实际进度直接跳转到所需阶段。
 
 | # | 文档 | 说明 |
 |---|------|------|
@@ -66,3 +66,4 @@
 | 4 | [模型训练](https://docs.ubtrobot.com/GHRC2026_TechnicalDocuments/docs/4/) | ACT、Diffusion Policy、π₀ (PI0)、π₀.₅ (PI05)、SmolVLA 等策略的完整训练指南与超参数说明。 |
 | 5 | [策略推理](https://docs.ubtrobot.com/GHRC2026_TechnicalDocuments/docs/5) | 使用训练好的策略模型进行推理并自动录制结果。 |
 | 6 | [四目实时显示](https://docs.ubtrobot.com/GHRC2026_TechnicalDocuments/docs/6/) | 4 个 RGB 相机的实时预览与可视化配置，支持遥操作、数据采集、回放和推理四种模式。 |
+| 7 | [自动数据采集工具](https://docs.ubtrobot.com/GHRC2026_TechnicalDocuments/docs/7/) | 通过自动化数据采集脚本进行任务数据采集。 |

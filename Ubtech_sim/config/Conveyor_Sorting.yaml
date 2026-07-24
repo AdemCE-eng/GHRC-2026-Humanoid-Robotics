@@ -3,13 +3,13 @@ root_path: "../../assets/resources/"
 
 scene_usd: 'Collected_Task4/SubUSDs/2_small_warehouse2.usd'
 
-timelimit: 100
+timelimit: 480
 
 task_number: 2
 
 part:
-  part_a_usd: "Collected_Part_B_ori_color/Part_B.usd"
-  part_b_usd: "Collected_Task2_Part_A/Task2_Part_A.usd"
+  part_a_usd: "Collected_Task2_Part_A/Task2_Part_A.usd"
+  part_b_usd: "Collected_Part_B_ori_color/Part_B.usd"
   num_parts: 4
   part_distance: 0.4
 
@@ -64,6 +64,30 @@ grasp:
   lift_time: 2.0
   tcp_offset: [0.0, 0.0, 0.0]   # sixforce_link 局部坐标系下 TCP 的偏移 (m)
   ik_rot_weight: 0.1
+  conveyor_part_a_place_rpy: [-3.1135, -0.3173, -2.1132]
+  conveyor_part_b_place_rpy: [3.0965, -0.1994, -1.7034]
+  conveyor_x_lead: 0.20
+  conveyor_stage2_target_x: 0.6000
+  conveyor_stage2_target_y: -0.1130
+  conveyor_stage2_target_z: 0.1
+  conveyor_stage2_duration: 0.4
+  conveyor_stage3_target_x: 0.6000
+  conveyor_stage3_target_y: -0.1130
+  conveyor_stage3_target_z: 0.0984
+  conveyor_stage4_target_x: None
+  conveyor_stage4_target_y: -0.1130
+  conveyor_stage4_target_z: 0.3
+  conveyor_stage6_prepare_target_z: 0.1
+  conveyor_left_bin_x_range: [0.39616, 0.57616]
+  conveyor_left_bin_y_range: [-0.202, 0.078]
+  conveyor_right_bin_x_range: [0.79616, 0.97616]
+  conveyor_right_bin_y_range: [-0.202, 0.078]
+  conveyor_close_world_x_min: 0.809
+  conveyor_close_world_x_max: 0.838
+  conveyor_resolved_world_x: 0.86
+  conveyor_record_start_x: 0.48
+  conveyor_home_return_steps: 15
+  conveyor_pose_log_interval_s: 0.05
   # 传动带中轴线起始端附近 (ConveyorBelt 中心 x=0.686, y=0.269)
   # 物体应在带面入口端生成，算符及坐标根据具体 USD 模型调整
   scatter_area:

@@ -143,9 +143,21 @@ class LeRobotDatasetMetadata:
             )
 
         self.writer.write_table(table)
+        # Close immediately so the parquet footer is on disk; crash won't corrupt completed episodes.
+        self.writer.close()
+        self.writer = None
 
         self.latest_episode = self.metadata_buffer[-1]
         self.metadata_buffer.clear()
+
+        # Advance file index so the next flush writes to a new file instead of overwriting this one.
+        next_chunk, next_file = update_chunk_file_indices(
+            self.latest_episode["meta/episodes/chunk_index"][0],
+            self.latest_episode["meta/episodes/file_index"][0],
+            self.chunks_size,
+        )
+        self.latest_episode["meta/episodes/chunk_index"] = [next_chunk]
+        self.latest_episode["meta/episodes/file_index"] = [next_file]
 
     def _close_writer(self) -> None:
         """Close and cleanup the parquet writer if it exists."""
@@ -1506,6 +1518,10 @@ class LeRobotDataset(torch.utils.data.Dataset):
                 path, schema=table.schema, compression="snappy", use_dictionary=True
             )
         self.writer.write_table(table)
+        # Close immediately so the parquet footer is on disk; crash won't corrupt completed episodes.
+        self.writer.close()
+        self.writer = None
+        self._writer_closed_for_reading = True  # force new file for the next episode
 
         metadata = {
             "data/chunk_index": chunk_idx,
