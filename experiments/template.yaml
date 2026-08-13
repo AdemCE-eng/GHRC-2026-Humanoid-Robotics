@@ -1,0 +1,25 @@
+# Experiment metadata template
+# Fill and commit a copy of this file for each experiment run (small and trackable).
+
+experiment_name: "example-act-training"
+date: "2026-08-13"
+branch: "exp/act-example"
+commit: "<git commit sha>"
+config: "Ubtech_sim/config/Conveyor_Sorting.yaml"
+dataset: "datasets/Conveyor_Sorting (local path or DVC remote ref)"
+seed: 42
+hyperparameters:
+  lr: 1e-4
+  batch_size: 64
+  epochs: 50
+
+artifacts:
+  checkpoint: "outputs/exp-name/checkpoint_best.pth"
+  logs: "outputs/exp-name/logs/"
+
+metrics:
+  val_accuracy: 0.0
+  loss: 0.0
+
+notes: |
+  Short notes about the run, notable changes, and next steps.
