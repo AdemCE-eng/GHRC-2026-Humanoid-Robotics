@@ -27,7 +27,7 @@ from source.coordinate_utils import CoordinateTransform
 from source.grasp_planner import GraspPlanner
 
 # ── 1. Configuration ─────────────────────────────────────────────────
-config_path = os.path.join(os.path.dirname(__file__), "config/task1.yaml")
+config_path = os.path.join(os.path.dirname(__file__), "config/Part_Sorting.yaml")
 cfg = load_config(config_path)
 grasp_cfg = cfg.get("grasp", {})
 
@@ -52,7 +52,7 @@ data_logger = DataLogger(
 )
 
 # ── 4. Scene (scatter area → build → physics settle) ────────────────
-scene = SceneBuilder(cfg, data_logger=data_logger, world=world)
+scene = SceneBuilder(cfg, data_logger=data_logger)
 apply_scatter_config(cfg)
 
 scene.build_all()
