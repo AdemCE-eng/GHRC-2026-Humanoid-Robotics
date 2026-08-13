@@ -1,0 +1,28 @@
+experiment_name: act_part_sorting_5k
+task: Part_Sorting
+
+training:
+  steps: 5000
+  batch_size: 8
+  learning_rate: 1.0e-5
+  chunk_size: 50
+  n_action_steps: 50
+  seed: 1000
+
+result:
+  final_training_loss: 0.517
+  checkpoint: 005000
+
+evaluation:
+  checkpoint_loaded: true
+  policy_actions_sent: 1285
+  elapsed_seconds: 100.07
+  average_fps: 12.84
+  max_joint_motion: 2.0
+
+observations:
+  - "Gripper behavior was reasonably learned."
+  - "Arm movement was active and responsive."
+  - "Object localization was poor."
+  - "The policy struggled to reach the objects accurately."
+  - "This run is the baseline for longer ACT training."
