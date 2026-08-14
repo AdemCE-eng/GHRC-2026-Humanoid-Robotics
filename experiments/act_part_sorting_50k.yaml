@@ -92,3 +92,43 @@ action_step_comparison:
     - normalization
     - cameras
     - simulation task
+
+training_scale_evaluation:
+  purpose: Determine whether additional ACT training improves reliable Part_Sorting completion.
+  inference_setting:
+    chunk_size: 50
+    n_action_steps: 50
+  checkpoints_evaluated:
+    - training_steps: 50000
+      quantitative_results:
+        successful_placements: 11
+        attempted_placements: 20
+        full_task_completions: 1
+        evaluation_runs: 5
+    - training_steps: 100000
+      evaluation_status: tested_in_isaac_sim
+      result: Did not consistently complete all objects.
+    - training_steps: 150000
+      evaluation_status: tested_in_isaac_sim
+      result: Did not consistently complete all objects.
+    - training_steps: 200000
+      training_status: completed_successfully
+      evaluation_status: tested_in_isaac_sim
+      result: Did not produce a sufficiently reliable policy.
+  scaling_result: Increasing ACT training from 50K to 200K did not consistently improve full task completion.
+  persistent_failure_modes:
+    - Poor recovery after object displacement.
+    - Incorrect retargeting after movement changes or accidental object motion.
+    - Repeated attempts around stale target locations.
+    - Occasional failed placement or dropping an object before it reaches the bin.
+  conclusion:
+    - Additional ACT training steps alone are not showing sufficient benefit.
+    - Do not continue ACT training to 300K or beyond for now.
+
+policy_decision:
+  current_baseline: ACT
+  selected_inference_setting:
+    chunk_size: 50
+    n_action_steps: 50
+  next_policy_to_test: Diffusion Policy
+  diffusion_training_started: false
