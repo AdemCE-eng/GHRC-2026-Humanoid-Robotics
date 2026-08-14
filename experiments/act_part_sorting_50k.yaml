@@ -1,0 +1,94 @@
+experiment: act_part_sorting_50k
+recorded_on: 2026-08-14
+task: Part_Sorting
+robot: Walker S2
+simulator: Isaac Sim 5.1
+platform: Windows 11
+
+checkpoint:
+  path: checkpoints/part_sorting_act_50k/pretrained_model
+  training_steps: 50000
+  policy: ACT
+  chunk_size: 50
+
+selected_inference_setting:
+  chunk_size: 50
+  n_action_steps: 50
+  rationale: The n_action_steps=50 baseline outperformed the n_action_steps=10 comparison.
+
+baseline_evaluation:
+  n_action_steps: 50
+  duration_seconds_per_run: 240
+  number_of_runs: 5
+  objects_per_run: 4
+  runs:
+    - run: 1
+      successful_placements: 1
+      task_completed: false
+      observations:
+        - The first successful placement took approximately 1 minute 40 seconds.
+        - For approximately the final 2 minutes, the policy repeatedly attempted to pick from the same middle area.
+    - run: 2
+      successful_placements: 4
+      task_completed: true
+      completion_time: approximately 1 minute
+      observations:
+        - The full task was completed with only one significant mistake.
+    - run: 3
+      successful_placements: 3
+      task_completed: false
+      observations:
+        - There were many failed grasp attempts.
+        - The gripper pushed the final red object close to the robot.
+        - The policy could not recover and pick the displaced object.
+    - run: 4
+      successful_placements: 1
+      task_completed: false
+      observations:
+        - While attempting the red object, the gripper pushed two objects away.
+        - The policy could not recover to pick the black object.
+    - run: 5
+      successful_placements: 2
+      task_completed: false
+      observations:
+        - The black object was grasped successfully but dropped instead of being placed in the bin.
+        - The policy again failed to recover when an object was pushed close to the robot.
+  summary:
+    successful_placements: 11
+    attempted_placements: 20
+    placement_success_rate: 0.55
+    full_task_completions: 1
+    full_task_runs: 5
+    full_task_completion_rate: 0.20
+    capabilities:
+      - The policy can localize, grasp, and place objects successfully.
+    limitations:
+      - Behavior is inconsistent across runs.
+      - The primary failure mode is poor recovery after objects are displaced by the gripper.
+      - Objects pushed close to the robot are especially difficult for the policy to recover and grasp.
+
+action_step_comparison:
+  purpose: Compare more frequent replanning against the n_action_steps=50 baseline.
+  checkpoint: same 50K checkpoint
+  chunk_size: 50
+  n_action_steps: 10
+  duration_seconds_per_run: 240
+  status: completed
+  result: qualitatively worse than the n_action_steps=50 baseline
+  observations:
+    - Robot behavior was noticeably slower.
+    - Reaching and grasping objects took much longer.
+    - The policy frequently attempted to grasp at incorrect locations.
+    - More frequent replanning did not improve recovery after object displacement.
+    - Overall manipulation quality was worse than with n_action_steps=50.
+  conclusion:
+    - Keep n_action_steps=50 as the current baseline inference setting.
+    - Keep the configurable --n-action-steps runner option for future experiments.
+    - Do not run additional n_action_steps experiments for now.
+  controls_held_constant:
+    - checkpoint
+    - dataset
+    - ACT architecture
+    - normalization
+    - cameras
+    - simulation task
