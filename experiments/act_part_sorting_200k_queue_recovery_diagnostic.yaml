@@ -1,0 +1,155 @@
+experiment: act_part_sorting_200k_queue_recovery_diagnostic
+recorded_on: 2026-08-15
+experiment_type: diagnostic_only
+trained_policy_created: false
+task: Part_Sorting
+robot: Walker S2
+simulator: Isaac Sim 5.1
+platform: Windows 11
+
+purpose: Determine whether stale actions in ACT's 50-action execution queue contribute to recovery failures after an object is displaced.
+
+checkpoint:
+  windows_path: D:\guedr\Projects\GHRC2026\checkpoints\part_sorting_act_200k
+  training_steps: 200000
+  policy: ACT
+  model_sha256: 7f3bf5717061e7a2fa484a9bc548770f9a91a4d8c6cd0564bb52ae9f7eff31ce
+  status: unchanged_existing_checkpoint
+
+controls:
+  paired_seeds: 5
+  total_runs: 10
+  duration_seconds_per_run: 240
+  measured_simulation_minutes: 40
+  objects_per_run: 4
+  chunk_size: 50
+  n_action_steps: 50
+  n_obs_steps: 1
+  temporal_ensemble: false
+  observation_state_shape: 20
+  rgb_cameras:
+    - head_left
+    - head_right
+    - wrist_left
+    - wrist_right
+  held_constant:
+    - checkpoint and saved normalization processors
+    - ACT architecture
+    - scene and robot
+    - cameras and policy observations
+    - requested simulation and control settings
+  diagnostic_ground_truth_policy_input: false
+  intervention: Clear only ACT's pending action queue with policy.reset() after a confirmed object displacement; generate a fresh chunk from the next observation.
+
+event_definitions:
+  displacement:
+    horizontal_threshold_cm: 3.0
+    confirmation_samples: 2
+    refractory_seconds: 2.0
+    exclusions:
+      - Objects lifted more than 4 cm above their initial table height.
+      - Objects already placed in the destination box.
+  placement:
+    definition: Object center remains inside the runtime destination-box bounds.
+    dwell_seconds: 0.5
+  strict_recovery:
+    definition: The same displaced object remains in the destination box within the recovery window.
+    recovery_window_seconds: 20.0
+
+instrumentation:
+  control_steps: 33460
+  generated_act_chunks: 695
+  significant_displacement_events: 72
+  event_triggered_replans: 32
+  failed_grasp_attempts: null
+  failed_grasp_note: Not inferred because the evaluator has no reliable contact or grasp-success signal.
+
+normal_act:
+  objects_placed: 7
+  possible_objects: 20
+  placement_rate: 0.35
+  full_completions: 1
+  total_runs: 5
+  full_completion_rate: 0.20
+  strict_recoveries: 8
+  strict_recovery_events: 40
+  strict_recovery_rate: 0.20
+  mean_control_rate_hz: 13.95
+
+replan_on_displacement:
+  objects_placed: 11
+  possible_objects: 20
+  placement_rate: 0.55
+  full_completions: 1
+  total_runs: 5
+  full_completion_rate: 0.20
+  strict_recoveries: 10
+  strict_recovery_events: 32
+  strict_recovery_rate: 0.3125
+  mean_control_rate_hz: 14.04
+  median_stale_actions_remaining_at_replan: 34
+
+paired_results:
+  improved_seeds: 3
+  regressed_seeds: 2
+  tied_seeds: 0
+  aggregate_object_gain: 4
+  aggregate_placement_rate_gain_percentage_points: 20.0
+  strict_recovery_rate_gain_percentage_points: 11.25
+  full_completion_gain: 0
+  throughput_interpretation: The approximately 0.09 Hz difference is not a material control-rate penalty.
+
+exact_settled_pose_subset:
+  seeds:
+    - 2
+    - 4
+    - 5
+  paired_runs: 3
+  normal:
+    objects_placed: 5
+    possible_objects: 12
+    placement_rate: 0.4167
+    strict_recovery_rate: 0.25
+  replan_on_displacement:
+    objects_placed: 7
+    possible_objects: 12
+    placement_rate: 0.5833
+    strict_recovery_rate: 0.32
+  placement_rate_gain_percentage_points: 16.67
+  strict_recovery_rate_gain_percentage_points: 7.0
+
+limitations:
+  - Isaac physics settling was not perfectly deterministic despite matched seeds.
+  - Seeds 1 and 3 did not have exactly matching post-warmup settled poses; the maximum observed position difference was 2.24 cm.
+  - Only seeds 2, 4, and 5 qualify as exact settled-pose pairs.
+  - Five paired seeds are diagnostic evidence, not a powered statistical study.
+  - Resetting the queue changes subsequent trajectories, so displacement-event denominators differ between conditions.
+  - Replanning improved aggregate placement but did not improve full-task completion and regressed two seeds.
+
+technical_conclusion:
+  classification: 2
+  label: Some evidence, but not enough
+  finding: Stale queued actions contribute to failures but are not sufficient to explain them.
+  interpretation:
+    - Queue clearing materially improved aggregate object placement.
+    - The intervention did not consistently improve every seed.
+    - The intervention did not improve the full-task completion rate.
+    - Automatic displacement-triggered replanning should not be enabled permanently based on this diagnostic.
+
+decision:
+  current_baseline: ACT 200K
+  enable_automatic_displacement_replanning: false
+  change_act_architecture: false
+  retrain_act: false
+  enable_temporal_ensembling: false
+  run_another_policy_experiment_now: false
+
+next_investigation:
+  focus: Dataset/control timing mismatch
+  dataset_nominal_rate_hz: 30
+  windows_evaluation_observed_rate_hz: approximately 14
+  rationale: Determine whether executing a policy trained for nominal 30 Hz data at approximately 14 Hz explains slow motion, stale spatial targeting, and incomplete recovery.
+
+artifacts:
+  location: D:\guedr\Projects\GHRC2026\experiments\act_queue_displacement
+  repository_policy: Raw logs, JSONL events, generated summaries, outputs, checkpoints, weights, caches, and Windows Isaac Sim files are intentionally not committed.
