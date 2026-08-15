@@ -1,0 +1,97 @@
+experiment: diffusion_part_sorting_10k
+recorded_on: 2026-08-15
+task: Part_Sorting
+robot: Walker S2
+dataset: same Part_Sorting dataset used for the ACT baseline
+
+environments:
+  training:
+    platform: WSL2 Ubuntu
+    repository: ~/projects/GlobalHumanoidRobotChallenge_2026_Baseline
+  evaluation:
+    platform: Windows 11
+    simulator: Isaac Sim 5.1
+    checkpoint_copy: D:\guedr\Projects\GHRC2026\checkpoints\part_sorting_diffusion_10k
+  checkpoint_separation_note: The Windows evaluation copy is not the WSL training checkpoint.
+
+policy:
+  type: diffusion
+  n_obs_steps: 2
+  horizon: 16
+  n_action_steps: 8
+  vision_backbone: resnet18
+  rgb_cameras: 4
+  observation_state_shape: 20
+  action_shape: 20
+  approximate_trainable_parameters: 275000000
+
+training:
+  target_steps: 10000
+  final_step: 10000
+  final_checkpoint: outputs/part_sorting_diffusion_10k/checkpoints/010000
+  final_checkpoint_saved: true
+  phases:
+    - step_range: 0-7500
+      batch_size: 8
+    - step_range: 7500-10000
+      resumed_from: outputs/part_sorting_diffusion_10k/checkpoints/007500
+      batch_size: 4
+      reason: Reduced for stability after crashes during the long training process.
+  data_loading:
+    final_num_workers: 0
+    reason: The earlier worker configuration caused a segmentation fault in the video/data loading path.
+  complications:
+    - The PC crashed twice during the long training process.
+    - Training was resumed from checkpoint 007500 rather than initializing a new model.
+  completion: Training successfully reached 10K and saved the final checkpoint.
+
+training_metrics:
+  final_reported_loss_approx: 0.014
+  final_gradient_norm_approx: 0.350
+  interpretation:
+    - These are optimization metrics on the training objective.
+    - The low training loss does not demonstrate successful Part_Sorting task performance.
+    - Simulation evaluation is the relevant measure of manipulation behavior and task reliability.
+
+isaac_sim_evaluation:
+  checkpoint_step: 10000
+  task: Part_Sorting
+  status: completed
+  result: unsuccessful_negative_experiment
+  comparison: Qualitatively much worse than the ACT baseline.
+  observations:
+    - Robot movement was extremely slow.
+    - Object targeting and reaching were poor.
+    - Picking behavior was worse than ACT.
+    - The policy showed no evidence of solving ACT's recovery or retargeting problem.
+    - Overall behavior was not competitive with the ACT baseline.
+  task_performance_interpretation: Successful optimization and low loss did not transfer to adequate closed-loop simulation performance.
+
+baseline_comparison:
+  current_baseline: ACT
+  act_summary:
+    - ACT understands the task and can grasp and place objects.
+    - Its best runs can be good, but reliability remains inadequate.
+    - Scaling ACT training from 50K through 200K did not resolve its main failure modes.
+  persistent_act_failure_modes:
+    - Poor recovery after an object is accidentally displaced.
+    - Stale targeting after the scene changes.
+    - Incorrect retargeting when movement changes.
+    - Repeated attempts at an old object location.
+    - Occasional failed placement or dropped object.
+
+decision:
+  selected_baseline: ACT
+  diffusion_10k_status: stopped_after_negative_evaluation
+  continue_diffusion_to_50k: false
+  continue_act_beyond_200k_by_scaling_steps_only: false
+  stop_reason:
+    - Diffusion 10K was substantially worse than ACT in Isaac Sim.
+    - Low training loss did not correspond to useful task performance.
+    - Additional compute is not justified before understanding the closed-loop failure mechanism.
+  next_investigation:
+    focus: Analyze ACT recovery and retargeting failures before additional policy experiments or ACT training.
+    priorities:
+      - Perception and target tracking after object displacement.
+      - Retargeting when the scene changes during motion.
+      - Recovery behavior after failed grasps, pushes, or drops.
