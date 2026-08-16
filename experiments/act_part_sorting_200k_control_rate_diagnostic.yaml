@@ -1,0 +1,102 @@
+experiment: act_part_sorting_200k_control_rate_diagnostic
+recorded_on: 2026-08-16
+experiment_type: diagnostic_only
+trained_policy_created: false
+task: Part_Sorting
+robot: Walker S2
+simulator: Isaac Sim 5.1
+platform: Windows 11
+
+purpose: Determine whether the mismatch between the Part_Sorting dataset's nominal 30 Hz rate and the Windows evaluator's approximately 14 Hz wall rate is a major cause of ACT failure.
+
+checkpoint:
+  training_steps: 200000
+  policy: ACT
+  status: unchanged_existing_checkpoint
+
+policy_settings:
+  n_obs_steps: 1
+  chunk_size: 50
+  n_action_steps: 50
+  temporal_ensemble: false
+
+controls:
+  paired_seeds: 3
+  runs_per_condition: 3
+  objects_per_run: 4
+  held_constant:
+    - ACT checkpoint and saved normalization processors
+    - ACT architecture and action queue settings
+    - scene, robot, cameras, and task
+    - dataset and policy observations
+
+baseline:
+  simulated_action_rate_hz: 20.0
+  successful_placements: 6
+  possible_placements: 12
+  placement_rate: 0.50
+  full_completions: 0
+  runs: 3
+  mean_wall_rate_hz: 13.44
+  displacement_events: 19
+  large_chunk_boundary_jumps: 33
+  measured_chunk_boundaries: 144
+  large_chunk_boundary_jump_rate: 0.229
+
+timing_adjusted:
+  physics_steps_per_action: 7
+  physics_timestep_ms: 5
+  simulated_action_period_ms: 35
+  simulated_action_rate_hz: 28.57
+  successful_placements: 7
+  possible_placements: 12
+  placement_rate: 0.583
+  full_completions: 0
+  runs: 3
+  mean_wall_rate_hz: 14.08
+  displacement_events: 29
+  large_chunk_boundary_jumps: 52
+  measured_chunk_boundaries: 204
+  large_chunk_boundary_jump_rate: 0.255
+
+paired_placements:
+  - seed: 1
+    baseline: 2
+    timing_adjusted: 3
+  - seed: 2
+    baseline: 3
+    timing_adjusted: 3
+  - seed: 3
+    baseline: 1
+    timing_adjusted: 1
+
+timing_measurements:
+  world_step_render_mean_ms: 54.69
+  true_realtime_30_hz_achievable: false
+  exact_30_simulated_hz_with_unchanged_5ms_physics_timestep_and_fresh_cameras: false
+  safe_adjusted_timing: 7 physics steps per action, corresponding to 35 ms or 28.57 simulated Hz
+
+limitations:
+  - Initial settled object poses differed between paired conditions by 0.82 to 2.22 cm.
+  - Only three paired seeds were evaluated, so the placement difference is diagnostic rather than statistically conclusive.
+  - The evaluator could not achieve true real-time 30 Hz because world.step(render=True) averaged 54.69 ms.
+  - The adjusted condition changed simulated action timing but did not eliminate the wall-rate limitation.
+  - Displacement-event and chunk-boundary denominators differed between conditions because their trajectories diverged.
+
+technical_conclusion:
+  finding: No meaningful evidence that the control-rate mismatch is a major cause of ACT failure.
+  evidence:
+    - Placement changed from 6/12 to 7/12, with improvement in only one of three paired seeds.
+    - Neither condition completed a full task.
+    - Large chunk-boundary jumps did not decrease under adjusted timing.
+    - Displacement events increased rather than decreased under adjusted timing.
+  interpretation: The nominal-versus-evaluation timing mismatch exists, but correcting simulated action timing toward 30 Hz did not materially resolve ACT reliability, recovery, or chunk-transition failures.
+
+decision:
+  current_baseline: ACT 200K
+  continue_timing_optimization_now: false
+  change_checkpoint_or_policy: false
+  next_investigation: Analyze Part_Sorting dataset coverage, recovery demonstrations, trajectory diversity, object balance, and observation/action temporal alignment.
+
+artifacts:
+  repository_policy: Raw logs, checkpoints, datasets, outputs, caches, generated analysis artifacts, and Isaac Sim files are intentionally not committed.
