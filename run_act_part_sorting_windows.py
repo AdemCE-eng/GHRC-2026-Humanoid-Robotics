@@ -41,8 +41,11 @@ from act_displacement_diagnostics import (  # noqa: E402
 )
 
 
-DEFAULT_CHECKPOINT = PROJECT_ROOT / "checkpoints" / "part_sorting_act_50k" / "pretrained_model"
-EXPERIMENT_CHECKPOINT = PROJECT_ROOT / "checkpoints" / "part_sorting_act_200k"
+# part_sorting_act_200k is the final selected Part Sorting policy (see
+# RECOVERY_V2_MIXED_FINETUNE_SUMMARY.md for the evaluation that selected it
+# over the recovery-only and mixed fine-tune candidates). It is the default
+# checkpoint for every invocation unless --checkpoint overrides it.
+DEFAULT_CHECKPOINT = PROJECT_ROOT / "checkpoints" / "part_sorting_act_200k"
 
 
 def parse_args() -> argparse.Namespace:
@@ -51,7 +54,7 @@ def parse_args() -> argparse.Namespace:
         "--checkpoint",
         type=Path,
         default=None,
-        help="Checkpoint directory. Diagnostic modes default to the pinned 200K checkpoint.",
+        help="Checkpoint directory. Defaults to the final selected 200K checkpoint.",
     )
     parser.add_argument(
         "--duration",
@@ -177,7 +180,7 @@ def action_payload(action: np.ndarray | None) -> list[float] | None:
 
 def main() -> int:
     args = parse_args()
-    checkpoint = (args.checkpoint or (EXPERIMENT_CHECKPOINT if args.experiment != "off" else DEFAULT_CHECKPOINT)).resolve()
+    checkpoint = (args.checkpoint or DEFAULT_CHECKPOINT).resolve()
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
