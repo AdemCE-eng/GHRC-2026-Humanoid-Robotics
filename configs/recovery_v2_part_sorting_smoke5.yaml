@@ -1,0 +1,49 @@
+schema_version: 2
+name: part_sorting_recovery_v2_smoke5
+total_episodes: 5
+seed_base: 2026081650
+
+scenario_mix:
+  normal_control: 1
+  object_displaced_during_approach: 1
+  missed_first_grasp: 1
+  drop_and_regrasp: 1
+  difficult_position: 1
+
+target_object_slot_cycle: [0, 1, 2, 3]
+
+difficult_positions_xyz:
+  - [0.62, 0.135, 1.04]
+  - [0.75, 0.135, 1.04]
+  - [0.88, 0.135, 1.04]
+  - [0.585, 0.25, 1.04]
+  - [0.915, 0.30, 1.04]
+
+safety:
+  workspace_x: [0.575, 0.925]
+  workspace_y: [0.130, 0.430]
+  workspace_z: [1.00, 1.12]
+  minimum_object_separation_m: 0.10
+  max_recovery_attempts_per_object: 3
+  max_episode_seconds: 180.0
+  joint_limit_margin_rad: 0.01
+  gripper_limit_tolerance_m: 0.001
+
+recovery:
+  displacement_threshold_m: 0.03
+  displacement_velocity_world_mps: [0.14, 0.0, 0.0]
+  displacement_steps: 12
+  missed_grasp_offset_world_m: [0.07, 0.0, 0.0]
+  retreat_height_m: 0.30
+  drop_release_height_above_table_m: 0.08
+  drop_settle_steps: 30
+  post_release_settle_steps: 10
+
+dataset_contract:
+  fps: 30
+  rgb_cameras: 4
+  observation_state_dim: 48
+  action_dim: 20
+  object_pose_dimensions: [20, 47]
+  object_poses_policy_input: false
+  temporal_convention: observation_t paired with action_selected_from_observation_t before world.step

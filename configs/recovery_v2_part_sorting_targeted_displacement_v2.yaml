@@ -1,0 +1,68 @@
+schema_version: 2
+name: part_sorting_recovery_v2_targeted_displacement_v2
+total_episodes: 2
+# Same seed_base as the previous targeted run so both episodes reuse the
+# exact seeds (2026081681, 2026081682) that failed the displacement-magnitude
+# check there - a direct regression check of the closed-loop fix.
+seed_base: 2026081681
+
+scenario_mix:
+  normal_control: 0
+  object_displaced_during_approach: 2
+  missed_first_grasp: 0
+  drop_and_regrasp: 0
+  difficult_position: 0
+
+target_object_slot_cycle: [0, 1, 2, 3]
+
+difficult_positions_xyz:
+  - [0.62, 0.135, 1.04]
+  - [0.75, 0.135, 1.04]
+  - [0.88, 0.135, 1.04]
+  - [0.585, 0.25, 1.04]
+  - [0.915, 0.30, 1.04]
+
+# Unchanged from prior configs (protected: shared by all scenarios).
+safety:
+  workspace_x: [0.575, 0.925]
+  workspace_y: [0.130, 0.430]
+  workspace_z: [1.00, 1.12]
+  minimum_object_separation_m: 0.10
+  max_recovery_attempts_per_object: 3
+  max_episode_seconds: 180.0
+  joint_limit_margin_rad: 0.01
+  gripper_limit_tolerance_m: 0.001
+
+recovery:
+  # Lower bound unchanged, per instructions.
+  displacement_threshold_m: 0.03
+  # New: explicit upper bound and edge margin consumed by the closed-loop
+  # _apply_physical_displacement. Not present in older configs (v4, v5,
+  # targeted_displaced_drop), which still work via the code's defaults.
+  displacement_upper_bound_m: 0.08
+  displacement_edge_margin_m: 0.02
+  # Velocity unchanged from the previous (sustained-push) attempt - that
+  # magnitude wasn't shown to be unsafe, only insufficient in duration.
+  displacement_velocity_world_mps: [0.10, 0.0, 0.0]
+  # Raised step budget: the closed loop now stops itself as soon as it
+  # reaches the target band or an edge margin, so a generous cap just gives
+  # it room to get there under normal friction rather than fixing a duration.
+  displacement_steps: 60
+  missed_grasp_offset_world_m: [0.07, 0.0, 0.0]
+  retreat_height_m: 0.30
+  drop_release_height_above_table_m: 0.03
+  drop_settle_steps: 30
+  post_release_settle_steps: 10
+
+ik_safety:
+  max_robot_base_target_norm_m: 1.45
+  max_target_delta_m: 1.25
+
+dataset_contract:
+  fps: 30
+  rgb_cameras: 4
+  observation_state_dim: 48
+  action_dim: 20
+  object_pose_dimensions: [20, 47]
+  object_poses_policy_input: false
+  temporal_convention: observation_t paired with action_selected_from_observation_t before world.step

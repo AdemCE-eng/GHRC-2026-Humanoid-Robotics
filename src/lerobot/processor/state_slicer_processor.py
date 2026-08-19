@@ -68,12 +68,15 @@ def slice_stats_for_state(
 
     Each entry under ``stats[OBS_STATE]`` (``mean``, ``std``, ``min``, ``max``,
     ``q01``, ``q99``, …) is assumed to be a tensor or array whose last
-    dimension matches the original state dimension.
+    dimension matches the original state dimension, except ``count`` (a single
+    scalar, not per-dimension), which is passed through unsliced.
     """
     if OBS_STATE not in stats:
         return stats
     result = deepcopy(stats)
     for stat_name, tensor in result[OBS_STATE].items():
         t = torch.as_tensor(tensor)
+        if t.ndim == 0:
+            continue
         result[OBS_STATE][stat_name] = t[..., :n_dims]
     return result

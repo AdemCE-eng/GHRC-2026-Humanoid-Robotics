@@ -70,6 +70,35 @@ class TrainPipelineConfig(HubMixin):
     wandb: WandBConfig = field(default_factory=WandBConfig)
     peft: PeftConfig | None = None
 
+    # When fine-tuning from a pretrained checkpoint (policy.pretrained_path set) on a
+    # different dataset than the one it was originally trained on, the default behavior
+    # recomputes the input/output normalizer from the NEW `dataset`'s stats, discarding
+    # the pretrained checkpoint's own normalization. Set this to a checkpoint directory
+    # (typically the same one as policy.pretrained_path) to instead reuse that
+    # checkpoint's own saved normalizer stats verbatim -- for every feature, including
+    # visual ones -- while `dataset` still supplies the actual training samples. A
+    # dataset-derived source (even the checkpoint's original training dataset) is NOT
+    # equivalent: dataset stat computation can apply substitutions (e.g. fixed ImageNet
+    # mean/std for visual features) that a fresh dataset-metadata load bypasses, so
+    # loading directly from the checkpoint's saved normalizer is the only way to
+    # guarantee an exact match. No effect unless policy.pretrained_path is set; no
+    # effect on which dataset is actually used for training.
+    normalization_stats_pretrained_path: str | Path | None = None
+
+    # Mix a second local dataset into training (e.g. a small auxiliary dataset
+    # alongside a large nominal one), sampled at a controlled per-draw ratio via
+    # WeightedConcatSampler (src/lerobot/datasets/mixed_sampler.py) -- rather
+    # than whatever the two datasets' raw episode/frame counts would otherwise
+    # produce if simply concatenated. Neither dataset is physically duplicated
+    # or modified. No effect unless mixed_dataset_repo_id is set; the default
+    # (None) preserves today's single-dataset training path exactly.
+    mixed_dataset_repo_id: str | None = None
+    mixed_dataset_root: str | Path | None = None
+    # Fraction of each training draw expected to come from `dataset` (the
+    # primary dataset); the mixed-in dataset gets 1 - mixed_dataset_ratio.
+    # Required if mixed_dataset_repo_id is set.
+    mixed_dataset_ratio: float | None = None
+
     # RA-BC (Reward-Aligned Behavior Cloning) parameters
     use_rabc: bool = False  # Enable reward-weighted training
     rabc_progress_path: str | None = None  # Path to precomputed SARM progress parquet file

@@ -131,3 +131,57 @@ def make_dataset(cfg: TrainPipelineConfig) -> LeRobotDataset | MultiLeRobotDatas
                 dataset.meta.stats[key][stats_type] = torch.tensor(stats, dtype=torch.float32)
 
     return dataset
+
+
+def make_mixed_secondary_dataset(cfg: TrainPipelineConfig) -> LeRobotDataset | None:
+    """Builds the secondary (mixed-in) dataset for mixed-data fine-tuning, using the
+    same single-LeRobotDataset construction path as make_dataset(), but reading
+    repo_id/root from cfg.mixed_dataset_repo_id/cfg.mixed_dataset_root instead of
+    cfg.dataset.repo_id/cfg.dataset.root.
+
+    This exists because MultiLeRobotDataset is unsupported in this codebase (see
+    the NotImplementedError above) and EpisodeAwareSampler only ever operates on
+    a single dataset's episode index. Mixing two datasets at a controlled sampling
+    ratio -- rather than whatever their raw episode/frame counts happen to produce
+    -- is handled downstream by build_mixed_sampler() in
+    src/lerobot/datasets/mixed_sampler.py, over a torch.utils.data.ConcatDataset
+    of this dataset and the primary one from make_dataset().
+
+    Returns:
+        The secondary LeRobotDataset, or None if cfg.mixed_dataset_repo_id is unset
+        (the default -- preserves today's single-dataset training path exactly).
+
+    Raises:
+        ValueError: if mixed_dataset_repo_id is set but mixed_dataset_ratio is not,
+            or if cfg.dataset.streaming is enabled (unsupported in combination).
+    """
+    if cfg.mixed_dataset_repo_id is None:
+        return None
+    if cfg.mixed_dataset_ratio is None:
+        raise ValueError("mixed_dataset_ratio must be set when mixed_dataset_repo_id is set")
+    if cfg.dataset.streaming:
+        raise ValueError("Mixed-data training does not support cfg.dataset.streaming")
+
+    image_transforms = (
+        ImageTransforms(cfg.dataset.image_transforms) if cfg.dataset.image_transforms.enable else None
+    )
+    ds_meta = LeRobotDatasetMetadata(
+        cfg.mixed_dataset_repo_id, root=cfg.mixed_dataset_root, revision=cfg.dataset.revision
+    )
+    delta_timestamps = resolve_delta_timestamps(cfg.policy, ds_meta)
+    secondary_dataset = LeRobotDataset(
+        cfg.mixed_dataset_repo_id,
+        root=cfg.mixed_dataset_root,
+        delta_timestamps=delta_timestamps,
+        image_transforms=image_transforms,
+        revision=cfg.dataset.revision,
+        video_backend=cfg.dataset.video_backend,
+        tolerance_s=cfg.tolerance_s,
+    )
+
+    if cfg.dataset.use_imagenet_stats:
+        for key in secondary_dataset.meta.camera_keys:
+            for stats_type, stats in IMAGENET_STATS.items():
+                secondary_dataset.meta.stats[key][stats_type] = torch.tensor(stats, dtype=torch.float32)
+
+    return secondary_dataset

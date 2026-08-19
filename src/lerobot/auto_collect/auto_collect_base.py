@@ -587,9 +587,22 @@ class AutoCollectBase(ABC):
         """
         pass
 
+    def _before_episode_reset(self, episode_index: int, attempt_index: int) -> None:
+        """Hook called immediately before resetting an episode attempt.
+
+        The default is intentionally a no-op so existing collectors preserve
+        their current randomization and reset behavior. Specialized collectors
+        can use it to seed scene randomization reproducibly.
+        """
+        del episode_index, attempt_index
+
     def _on_episode_saved(self, dataset, episode_index: int, episode_length: int) -> None:
         """每个 episode 成功保存后的回调，子类可覆盖以写任务侧元数据。"""
         pass
+
+    def _after_episode_attempts_exhausted(self, episode_index: int, attempts: int) -> None:
+        """Optional task hook after bounded attempts fail; default preserves behavior."""
+        del episode_index, attempts
 
     def _get_episode_parts(self, robot) -> list[dict]:
         """返回当前 episode 可处理零件列表，子类可覆盖特殊场景查询方式。"""
@@ -726,6 +739,7 @@ class AutoCollectBase(ABC):
                     if retry_count > 1:
                         logging.info(f"重试 {retry_count}/{cfg.max_retries}")
 
+                    self._before_episode_reset(episode_idx, retry_count)
                     logging.info("重置场景...")
                     robot.reset()
                     # 等待物理稳定
@@ -777,6 +791,7 @@ class AutoCollectBase(ABC):
 
                 if retry_count >= cfg.max_retries and not episode_success:
                     logging.error(f"重试次数超过上限 ({cfg.max_retries})，跳过当前 episode")
+                    self._after_episode_attempts_exhausted(episode_idx, retry_count)
 
                 if episode_success:
                     logging.info(f"\n所有 {len(parts)} 个零件处理完成！")

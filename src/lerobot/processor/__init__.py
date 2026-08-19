@@ -50,7 +50,12 @@ from .hil_processor import (
     RewardClassifierProcessorStep,
     TimeLimitProcessorStep,
 )
-from .normalize_processor import NormalizerProcessorStep, UnnormalizerProcessorStep, hotswap_stats
+from .normalize_processor import (
+    NormalizerProcessorStep,
+    UnnormalizerProcessorStep,
+    hotswap_stats,
+    load_normalizer_stats_from_pretrained,
+)
 from .observation_processor import VanillaObservationProcessorStep
 from .pipeline import (
     ActionProcessorStep,
@@ -92,6 +97,7 @@ __all__ = [
     "GymHILAdapterProcessorStep",
     "GripperPenaltyProcessorStep",
     "hotswap_stats",
+    "load_normalizer_stats_from_pretrained",
     "IdentityProcessorStep",
     "ImageCropResizeProcessorStep",
     "InfoProcessorStep",

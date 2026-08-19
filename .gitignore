@@ -108,8 +108,8 @@ convert_split_env_state.py
 # Keep large datasets, outputs, model artifacts, virtualenvs and caches out of Git
 # (These are conservative; they do not affect tracked files already committed.)
 # Datasets and generated data
-datasets/
-datasets/**
+/datasets/
+/datasets/**
 
 # Training outputs, checkpoints, and intermediate artifacts
 outputs/

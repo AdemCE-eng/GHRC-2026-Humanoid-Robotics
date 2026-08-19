@@ -26,9 +26,9 @@ from torch import Tensor
 
 from src.lerobot.configs.types import FeatureType, NormalizationMode, PipelineFeatureType, PolicyFeature
 from src.lerobot.datasets.lerobot_dataset import LeRobotDataset
-from src.lerobot.utils.constants import ACTION
+from src.lerobot.utils.constants import ACTION, POLICY_PREPROCESSOR_DEFAULT_NAME
 
-from .converters import from_tensor_to_numpy, to_tensor
+from .converters import batch_to_transition, from_tensor_to_numpy, to_tensor, transition_to_batch
 from .core import EnvTransition, PolicyAction, TransitionKey
 from .pipeline import PolicyProcessorPipeline, ProcessorStep, ProcessorStepRegistry, RobotObservation
 
@@ -558,3 +558,43 @@ def hotswap_stats(
             # Re-initialize tensor_stats on the correct device.
             step._tensor_stats = to_tensor(stats, device=step.device, dtype=step.dtype)  # type: ignore[assignment]
     return rp
+
+
+def load_normalizer_stats_from_pretrained(pretrained_path: str) -> dict[str, dict[str, Any]]:
+    """
+    Loads the exact normalization statistics saved in a pretrained policy's
+    preprocessor, for every normalized feature (state, action, and all visual
+    features) exactly as saved -- not recomputed or reconstructed from any
+    dataset.
+
+    Use this as the normalizer source of truth when fine-tuning from a
+    pretrained checkpoint on a different dataset than it was originally
+    trained on. Dataset-derived stats -- even from the checkpoint's own
+    original training dataset -- can diverge from what's actually baked into
+    the checkpoint: e.g. `use_imagenet_stats` substitutes fixed ImageNet
+    mean/std for visual features at `make_dataset()` time, which a fresh
+    `LeRobotDatasetMetadata` load bypasses, silently yielding very different
+    (and effectively unusable) visual normalization stats.
+
+    Args:
+        pretrained_path: Path or hub repo id of a saved policy checkpoint
+            directory containing `policy_preprocessor.json` and its
+            normalizer safetensors file.
+
+    Returns:
+        The nested stats dict (`{feature_name: {stat_name: tensor}}`) exactly
+        as saved in the checkpoint's `NormalizerProcessorStep`.
+
+    Raises:
+        ValueError: If the loaded preprocessor has no normalizer step.
+    """
+    pipeline = PolicyProcessorPipeline.from_pretrained(
+        pretrained_model_name_or_path=pretrained_path,
+        config_filename=f"{POLICY_PREPROCESSOR_DEFAULT_NAME}.json",
+        to_transition=batch_to_transition,
+        to_output=transition_to_batch,
+    )
+    for step in pipeline.steps:
+        if isinstance(step, NormalizerProcessorStep):
+            return deepcopy(step.stats)
+    raise ValueError(f"No NormalizerProcessorStep found in preprocessor loaded from {pretrained_path!r}")

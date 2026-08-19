@@ -28,7 +28,8 @@ from tqdm import tqdm
 
 from src.lerobot.configs import parser
 from src.lerobot.configs.train import TrainPipelineConfig
-from src.lerobot.datasets.factory import make_dataset
+from src.lerobot.datasets.factory import make_dataset, make_mixed_secondary_dataset
+from src.lerobot.datasets.mixed_sampler import build_mixed_sampler
 from src.lerobot.datasets.sampler import EpisodeAwareSampler
 from src.lerobot.datasets.utils import cycle
 from src.lerobot.envs.factory import make_env, make_env_pre_post_processors
@@ -36,7 +37,11 @@ from src.lerobot.envs.utils import close_envs
 from src.lerobot.optim.factory import make_optimizer_and_scheduler
 from src.lerobot.policies.factory import make_policy, make_pre_post_processors
 from src.lerobot.policies.pretrained import PreTrainedPolicy
-from src.lerobot.processor import StateSlicerProcessorStep, slice_stats_for_state
+from src.lerobot.processor import (
+    StateSlicerProcessorStep,
+    load_normalizer_stats_from_pretrained,
+    slice_stats_for_state,
+)
 from src.lerobot.rl.wandb_utils import WandBLogger
 from src.lerobot.scripts.lerobot_eval import eval_policy_all
 from src.lerobot.utils.import_utils import register_third_party_plugins
@@ -221,12 +226,14 @@ def train(cfg: TrainPipelineConfig, accelerator: Accelerator | None = None):
     if is_main_process:
         logging.info("Creating dataset")
         dataset = make_dataset(cfg)
+        secondary_dataset = make_mixed_secondary_dataset(cfg)
 
     accelerator.wait_for_everyone()
 
     # Now all other processes can safely load the dataset
     if not is_main_process:
         dataset = make_dataset(cfg)
+        secondary_dataset = make_mixed_secondary_dataset(cfg)
 
     # Create environment used for evaluating checkpoints during training on simulation data.
     # On real-world data, no need to create an environment as evaluations are done outside train.py,
@@ -255,6 +262,25 @@ def train(cfg: TrainPipelineConfig, accelerator: Accelerator | None = None):
 
     # Truncate dataset stats to model-compatible state dimension
     truncated_stats = slice_stats_for_state(dataset.meta.stats, n_dims=20)
+
+    # Fine-tuning on a different dataset than the checkpoint's original training set
+    # would otherwise silently rebase the input/output normalizer onto that new
+    # dataset's stats. When normalization_stats_pretrained_path is set, reuse that
+    # checkpoint's own saved normalizer stats verbatim (state, action, AND visual
+    # features) instead, leaving `dataset` as the sole source of training samples.
+    # A dataset-derived source is NOT equivalent here even for the checkpoint's own
+    # original training dataset -- see load_normalizer_stats_from_pretrained's
+    # docstring. See TrainPipelineConfig.normalization_stats_pretrained_path.
+    if cfg.normalization_stats_pretrained_path is not None:
+        truncated_stats = slice_stats_for_state(
+            load_normalizer_stats_from_pretrained(str(cfg.normalization_stats_pretrained_path)), n_dims=20
+        )
+        logging.info(
+            "Sourcing input/output normalization stats verbatim from the saved normalizer at "
+            "%s instead of the active training dataset %s, per --normalization_stats_pretrained_path.",
+            cfg.normalization_stats_pretrained_path,
+            cfg.dataset.repo_id,
+        )
 
     # Create processors - only provide dataset_stats if not resuming from saved processors
     processor_kwargs = {}
@@ -352,8 +378,30 @@ def train(cfg: TrainPipelineConfig, accelerator: Accelerator | None = None):
         logging.info(f"{num_total_params=} ({format_big_number(num_total_params)})")
 
     # create dataloader for offline training
-    if hasattr(cfg.policy, "drop_n_last_frames"):
+    if secondary_dataset is not None:
         shuffle = False
+        train_dataset = torch.utils.data.ConcatDataset([dataset, secondary_dataset])
+        sampler, mixed_report = build_mixed_sampler(
+            primary_dataset=dataset,
+            secondary_dataset=secondary_dataset,
+            primary_ratio=cfg.mixed_dataset_ratio,
+            num_samples=cfg.steps * cfg.batch_size,
+            drop_n_last_frames=getattr(cfg.policy, "drop_n_last_frames", 0),
+        )
+        if is_main_process:
+            logging.info(
+                "Mixed-data training: primary=%s (%d valid indices, target ratio %.3f), "
+                "secondary=%s (%d valid indices, target ratio %.3f)",
+                cfg.dataset.repo_id,
+                mixed_report.n_primary_valid,
+                mixed_report.primary_ratio,
+                cfg.mixed_dataset_repo_id,
+                mixed_report.n_secondary_valid,
+                mixed_report.secondary_ratio,
+            )
+    elif hasattr(cfg.policy, "drop_n_last_frames"):
+        shuffle = False
+        train_dataset = dataset
         sampler = EpisodeAwareSampler(
             dataset.meta.episodes["dataset_from_index"],
             dataset.meta.episodes["dataset_to_index"],
@@ -363,10 +411,11 @@ def train(cfg: TrainPipelineConfig, accelerator: Accelerator | None = None):
         )
     else:
         shuffle = True
+        train_dataset = dataset
         sampler = None
 
     dataloader = torch.utils.data.DataLoader(
-        dataset,
+        train_dataset,
         num_workers=cfg.num_workers,
         batch_size=cfg.batch_size,
         shuffle=shuffle and not cfg.dataset.streaming,

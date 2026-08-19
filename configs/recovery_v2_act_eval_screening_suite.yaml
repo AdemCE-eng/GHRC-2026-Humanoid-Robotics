@@ -1,0 +1,46 @@
+name: recovery_v2_act_eval_screening_suite
+description: 2 episodes x 5 categories = 10 episodes/checkpoint. Reused identically
+  across baseline 200K and fine-tune checkpoints 1K-5K.
+episodes_per_category: 2
+checkpoints_to_evaluate:
+- checkpoints/part_sorting_act_200k
+- outputs/part_sorting_act_recovery_finetune_5k/checkpoints/001000/pretrained_model
+- outputs/part_sorting_act_recovery_finetune_5k/checkpoints/002000/pretrained_model
+- outputs/part_sorting_act_recovery_finetune_5k/checkpoints/003000/pretrained_model
+- outputs/part_sorting_act_recovery_finetune_5k/checkpoints/004000/pretrained_model
+- outputs/part_sorting_act_recovery_finetune_5k/checkpoints/005000/pretrained_model
+episodes:
+- scenario: normal
+  seed: 1
+  target_slot: 0
+- scenario: normal
+  seed: 2
+  target_slot: 1
+- scenario: difficult_position
+  seed: 1
+  target_slot: 0
+  difficult_position_index: 0
+- scenario: difficult_position
+  seed: 2
+  target_slot: 1
+  difficult_position_index: 1
+- scenario: displaced_during_approach
+  seed: 1
+  target_slot: 0
+  displaced_trigger_time_s: 8.0
+- scenario: displaced_during_approach
+  seed: 2
+  target_slot: 1
+  displaced_trigger_time_s: 8.0
+- scenario: missed_first_grasp
+  seed: 1
+  target_slot: 0
+- scenario: missed_first_grasp
+  seed: 2
+  target_slot: 1
+- scenario: drop_and_regrasp
+  seed: 1
+  target_slot: 0
+- scenario: drop_and_regrasp
+  seed: 2
+  target_slot: 1
